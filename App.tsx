@@ -52,7 +52,6 @@ const App: React.FC = () => {
       timestamp: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
-    console.log(`%c[SIMULAÇÃO DE EMAIL]\nPara: ${to}\nAssunto: ${subject}\nMensagem: ${message}`, 'color: #4f46e5; font-weight: bold;');
   };
 
   const handleLogin = (user: User) => {
@@ -74,19 +73,26 @@ const App: React.FC = () => {
 
   const addTrip = (trip: Trip) => {
     setTrips(prev => [trip, ...prev]);
-    const admins = users.filter(u => u.role === 'admin');
-    admins.forEach(admin => {
-      sendMockEmail(admin.email, 'Nova Solicitação de Viagem', `O motorista ${trip.driverName} cadastrou uma nova viagem de ${trip.origin} para ${trip.destination}.`);
-    });
+  };
+
+  const updateExistingTrip = (updatedTrip: Trip) => {
+    setTrips(prev => prev.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    
+    if (updatedTrip.status === 'Pendente') {
+      const admins = users.filter(u => u.role === 'admin');
+      admins.forEach(admin => {
+        sendMockEmail(admin.email, 'Viagem Finalizada para Aprovação', `O motorista ${updatedTrip.driverName} finalizou a viagem de ${updatedTrip.origin} para ${updatedTrip.destination} e aguarda sua aprovação.`);
+      });
+    }
   };
 
   const updateTripStatus = (tripId: string, status: 'Aprovado' | 'Rejeitado', comment: string) => {
     setTrips(prev => prev.map(t => {
       if (t.id === tripId) {
-        const updatedTrip = { ...t, status, adminComment: comment };
+        const updatedTrip = { ...t, status, adminComment: comment } as Trip;
         const driver = users.find(u => u.id === t.driverId);
         if (driver) {
-          sendMockEmail(driver.email, `Viagem ${status}`, `Sua solicitação de ${t.origin} para ${t.destination} foi ${status.toLowerCase()}.\nComentário do Admin: ${comment || 'Sem comentários.'}`);
+          sendMockEmail(driver.email, `Viagem ${status}`, `Sua solicitação de ${t.origin} para ${t.destination} foi ${status.toLowerCase()}.`);
         }
         return updatedTrip;
       }
@@ -109,18 +115,8 @@ const App: React.FC = () => {
             </div>
             {auth.user.role === 'admin' && (
               <div className="flex space-x-4 ml-4">
-                <button 
-                  onClick={() => setView('dashboard')}
-                  className={`text-sm font-medium px-3 py-1 rounded-lg transition-colors ${view === 'dashboard' ? 'bg-indigo-700' : 'hover:bg-indigo-500'}`}
-                >
-                  Gestão
-                </button>
-                <button 
-                  onClick={() => setView('reports')}
-                  className={`text-sm font-medium px-3 py-1 rounded-lg transition-colors ${view === 'reports' ? 'bg-indigo-700' : 'hover:bg-indigo-500'}`}
-                >
-                  Relatórios
-                </button>
+                <button onClick={() => setView('dashboard')} className={`text-sm font-medium px-3 py-1 rounded-lg ${view === 'dashboard' ? 'bg-indigo-700' : 'hover:bg-indigo-500'}`}>Gestão</button>
+                <button onClick={() => setView('reports')} className={`text-sm font-medium px-3 py-1 rounded-lg ${view === 'reports' ? 'bg-indigo-700' : 'hover:bg-indigo-500'}`}>Relatórios</button>
               </div>
             )}
           </div>
@@ -129,11 +125,7 @@ const App: React.FC = () => {
               <p className="text-sm font-medium">{auth.user.name}</p>
               <p className="text-xs text-indigo-100 opacity-80 uppercase">{auth.user.role === 'admin' ? 'Administrador' : 'Motorista'}</p>
             </div>
-            <button 
-              onClick={handleLogout}
-              className="bg-indigo-700 hover:bg-indigo-800 p-2 rounded-full transition-colors flex items-center justify-center w-10 h-10"
-              title="Sair"
-            >
+            <button onClick={handleLogout} className="bg-indigo-700 hover:bg-indigo-800 p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors">
               <i className="fas fa-sign-out-alt"></i>
             </button>
           </div>
@@ -143,15 +135,9 @@ const App: React.FC = () => {
       {notifications.length > 0 && (
         <div className="fixed bottom-4 right-4 z-[100] w-80 space-y-2">
           {notifications.slice(0, 1).map(n => (
-            <div key={n.id} className="bg-white border-l-4 border-indigo-500 p-4 rounded-lg shadow-xl animate-in slide-in-from-right-full">
-              <div className="flex justify-between items-start">
-                <h4 className="text-xs font-bold text-indigo-600 uppercase">Email Enviado</h4>
-                <button onClick={() => setNotifications(prev => prev.filter(x => x.id !== n.id))} className="text-gray-400 hover:text-gray-600">
-                  <i className="fas fa-times"></i>
-                </button>
-              </div>
+            <div key={n.id} className="bg-white border-l-4 border-indigo-500 p-4 rounded-lg shadow-xl">
+              <h4 className="text-xs font-bold text-indigo-600 uppercase">Aviso do Sistema</h4>
               <p className="text-xs text-gray-800 font-semibold mt-1">{n.subject}</p>
-              <p className="text-[10px] text-gray-500 line-clamp-2 mt-1">{n.message}</p>
             </div>
           ))}
         </div>
@@ -163,7 +149,7 @@ const App: React.FC = () => {
         ) : auth.user.role === 'admin' ? (
           <DashboardAdmin trips={trips} onUpdateStatus={updateTripStatus} />
         ) : (
-          <DashboardDriver user={auth.user} trips={trips.filter(t => t.driverId === auth.user?.id)} onAddTrip={addTrip} />
+          <DashboardDriver user={auth.user} trips={trips.filter(t => t.driverId === auth.user?.id)} onAddTrip={addTrip} onUpdateTrip={updateExistingTrip} />
         )}
       </main>
     </div>

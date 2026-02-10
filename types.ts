@@ -9,17 +9,28 @@ export interface User {
   password?: string;
 }
 
-export type TripStatus = 'Pendente' | 'Aprovado' | 'Rejeitado';
+export type TripStatus = 'Em Andamento' | 'Pendente' | 'Aprovado' | 'Rejeitado';
 
 export interface Trip {
   id: string;
   driverId: string;
   driverName: string;
+  vehiclePlate: string;
+  
+  // Part 1 (Obrigatório no Início)
   date: string;
-  origin: string;
-  destination: string;
   kmInitial: number;
-  kmFinal: number;
+  photoInitial: string; 
+  startTime: string; 
+  origin: string;
+
+  // Part 2 (Obrigatório na Finalização)
+  kmFinal?: number;
+  photoFinal?: string; 
+  endTime?: string; 
+  destination?: string;
+  endDate?: string; 
+
   status: TripStatus;
   adminComment?: string;
   createdAt: string;

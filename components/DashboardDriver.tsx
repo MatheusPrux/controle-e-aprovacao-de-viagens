@@ -7,103 +7,101 @@ interface DashboardDriverProps {
   user: User;
   trips: Trip[];
   onAddTrip: (trip: Trip) => void;
+  onUpdateTrip: (trip: Trip) => void;
 }
 
-const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTrip }) => {
+const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTrip, onUpdateTrip }) => {
   const [showForm, setShowForm] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
 
   const getStatusColor = (status: TripStatus) => {
     switch (status) {
       case 'Aprovado': return 'bg-green-100 text-green-800 border-green-200';
       case 'Rejeitado': return 'bg-red-100 text-red-800 border-red-200';
+      case 'Em Andamento': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     }
   };
 
-  const getStatusIcon = (status: TripStatus) => {
-    switch (status) {
-      case 'Aprovado': return <i className="fas fa-check-circle mr-1"></i>;
-      case 'Rejeitado': return <i className="fas fa-times-circle mr-1"></i>;
-      default: return <i className="fas fa-clock mr-1"></i>;
-    }
+  const openFinishForm = (trip: Trip) => {
+    setSelectedTrip(trip);
+    setShowForm(true);
+  };
+
+  const handleNewTrip = () => {
+    setSelectedTrip(null);
+    setShowForm(true);
   };
 
   return (
-    <div className="space-y-6 pb-20 sm:pb-0">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Minhas Viagens</h2>
-          <p className="text-gray-500">Acompanhe o status de suas solicitações</p>
+          <h2 className="text-2xl font-bold text-gray-800">Painel do Motorista</h2>
+          <p className="text-gray-500">Controle de início e fim de viagens</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={handleNewTrip}
           className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center space-x-2 shadow-lg hover:bg-indigo-700 transition-all active:scale-95"
         >
-          <i className="fas fa-plus"></i>
-          <span>Nova Solicitação</span>
+          <i className="fas fa-play"></i>
+          <span>Iniciar Viagem</span>
         </button>
       </div>
 
       <div className="grid gap-4">
         {trips.length === 0 ? (
-          <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-100 text-center">
-            <div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i className="fas fa-route text-gray-300 text-3xl"></i>
-            </div>
-            <p className="text-gray-500 font-medium">Você ainda não possui viagens registradas.</p>
-            <p className="text-sm text-gray-400">Clique no botão acima para iniciar uma nova viagem.</p>
+          <div className="bg-white p-12 rounded-2xl border text-center text-gray-400">
+            Nenhuma viagem iniciada ou registrada.
           </div>
         ) : (
           trips.map((trip) => (
-            <div key={trip.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:border-indigo-200 transition-all flex flex-col">
-              <div className="p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center ${getStatusColor(trip.status)}`}>
-                    {getStatusIcon(trip.status)}
-                    {trip.status}
-                  </span>
-                  <span className="text-sm text-gray-400 flex items-center">
-                    <i className="far fa-calendar-alt mr-2"></i>
+            <div key={trip.id} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusColor(trip.status)}`}>
+                      {trip.status === 'Em Andamento' && <i className="fas fa-truck-moving mr-1"></i>}
+                      {trip.status}
+                    </span>
+                    <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-[10px] font-bold">{trip.vehiclePlate}</span>
+                  </div>
+                  <span className="text-xs text-gray-400 font-medium">
                     {new Date(trip.date).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
-                
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-10">
-                  <div className="flex items-start space-x-3 flex-1">
-                    <div className="flex flex-col items-center mt-1">
-                      <div className="w-2 h-2 rounded-full bg-indigo-400"></div>
-                      <div className="w-0.5 h-6 bg-gray-200"></div>
-                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Trajeto</div>
-                      <div className="text-gray-800 font-semibold text-lg leading-tight">{trip.origin} <span className="text-gray-300 font-normal mx-1">→</span> {trip.destination}</div>
-                    </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase">Origem</div>
+                    <div className="font-bold text-gray-900">{trip.origin} <span className="text-indigo-600 ml-2">({trip.startTime})</span></div>
+                    <div className="text-xs text-gray-500">KM Inicial: {trip.kmInitial}</div>
                   </div>
 
-                  <div className="sm:pl-10 sm:border-l border-gray-100 flex flex-col justify-center">
-                    <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Quilometragem</div>
-                    <div className="text-gray-800 flex items-baseline space-x-2">
-                      <span className="text-xl font-extrabold text-indigo-600">{trip.kmFinal - trip.kmInitial}</span>
-                      <span className="text-sm font-bold text-indigo-400">KM TOTAL</span>
+                  {trip.status === 'Em Andamento' ? (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => openFinishForm(trip)}
+                        className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold text-sm shadow hover:bg-green-700 transition-all active:scale-95 flex items-center"
+                      >
+                        <i className="fas fa-flag-checkered mr-2"></i> Finalizar Viagem
+                      </button>
                     </div>
-                    <div className="text-[10px] text-gray-400 mt-1">
-                      {trip.kmInitial} → {trip.kmFinal}
+                  ) : (
+                    <div className="space-y-1 md:text-right">
+                      <div className="text-[10px] font-bold text-gray-400 uppercase">Destino</div>
+                      <div className="font-bold text-gray-900">{trip.destination} <span className="text-purple-600 ml-2">({trip.endTime})</span></div>
+                      <div className="text-xs text-gray-500">KM Final: {trip.kmFinal} | Total: {(trip.kmFinal || 0) - trip.kmInitial} KM</div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {trip.adminComment && (
-                  <div className="mt-2 bg-gray-50 p-3 rounded-xl border border-gray-100 relative">
-                    <div className="absolute -top-2 left-4 px-2 bg-gray-50 text-[10px] font-bold text-gray-400 uppercase">Feedback do Admin</div>
-                    <p className="text-sm text-gray-600 italic">"{trip.adminComment}"</p>
+                  <div className="mt-4 p-3 bg-gray-50 rounded-xl border text-xs text-gray-600 italic">
+                    <span className="font-bold text-gray-400 block mb-1 uppercase">Observação Admin:</span>
+                    "{trip.adminComment}"
                   </div>
                 )}
-              </div>
-              
-              <div className="bg-gray-50/50 px-5 py-2 text-[10px] text-gray-400 flex justify-between items-center border-t border-gray-50">
-                <span>ID: {trip.id.substring(0, 8)}</span>
-                <span>Criado em {new Date(trip.createdAt).toLocaleString('pt-BR')}</span>
               </div>
             </div>
           ))
@@ -113,9 +111,11 @@ const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTri
       {showForm && (
         <TripForm 
           user={user} 
+          existingTrip={selectedTrip}
           onClose={() => setShowForm(false)} 
-          onSubmit={(newTrip) => {
-            onAddTrip(newTrip);
+          onSubmit={(data) => {
+            if (selectedTrip) onUpdateTrip(data);
+            else onAddTrip(data);
             setShowForm(false);
           }} 
         />
