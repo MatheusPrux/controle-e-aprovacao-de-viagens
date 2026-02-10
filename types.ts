@@ -25,6 +25,7 @@ export interface Trip {
   origin: string;
 
   // Fábrica (Etapas Intermediárias)
+  factoryName?: string;
   factoryArrivalTime?: string;
   factoryArrivalPhoto?: string;
   factoryDepartureTime?: string;

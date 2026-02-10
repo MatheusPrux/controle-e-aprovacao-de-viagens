@@ -20,112 +20,198 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
   const totalKm = useMemo(() => approvedTrips.reduce((acc, t) => acc + ((t.kmFinal || 0) - t.kmInitial), 0), [approvedTrips]);
 
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year}`;
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
       {selectedGallery && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6" onClick={() => setSelectedGallery(null)}>
-           <div className="bg-white p-6 rounded-3xl w-full max-w-4xl" onClick={e => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-6 backdrop-blur-sm" onClick={() => setSelectedGallery(null)}>
+           <div className="bg-white p-10 rounded-[3rem] w-full max-w-6xl max-h-[92vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-start mb-10 border-b pb-6 border-gray-100">
                  <div>
-                    <h3 className="text-xl font-black text-gray-800">Galeria de Evidências</h3>
-                    <p className="text-sm text-gray-500">{selectedGallery.driverName} • {selectedGallery.vehiclePlate}</p>
+                    <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase">Audit Log Detalhado</h3>
+                    <p className="text-gray-500 font-bold mt-2">
+                       Motorista: <span className="text-indigo-600">{selectedGallery.driverName}</span> 
+                       <span className="mx-3 text-gray-200">|</span> 
+                       Veículo: <span className="text-indigo-600">{selectedGallery.vehiclePlate}</span>
+                    </p>
                  </div>
-                 <button onClick={() => setSelectedGallery(null)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200"><i className="fas fa-times"></i></button>
+                 <button onClick={() => setSelectedGallery(null)} className="p-5 bg-gray-50 rounded-full hover:bg-gray-200 transition-all text-gray-400 hover:text-gray-900 group">
+                    <i className="fas fa-times text-xl group-hover:rotate-90 transition-transform"></i>
+                 </button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                  {[
-                   {img: selectedGallery.photoInitial, label: 'Partida', time: selectedGallery.startTime},
-                   {img: selectedGallery.factoryArrivalPhoto, label: 'Chegada Fáb.', time: selectedGallery.factoryArrivalTime},
-                   {img: selectedGallery.factoryDeparturePhoto, label: 'Saída Fáb.', time: selectedGallery.factoryDepartureTime},
-                   {img: selectedGallery.photoFinal, label: 'Destino', time: selectedGallery.endTime},
+                   {img: selectedGallery.photoInitial, label: '1. Partida', sub: selectedGallery.origin, time: selectedGallery.startTime, icon: 'fa-play', color: 'indigo'},
+                   {img: selectedGallery.factoryArrivalPhoto, label: '2. Chegada Fáb.', sub: selectedGallery.factoryName, time: selectedGallery.factoryArrivalTime, icon: 'fa-industry', color: 'amber'},
+                   {img: null, label: '3. Saída Fáb.', sub: selectedGallery.factoryName, time: selectedGallery.factoryDepartureTime, icon: 'fa-clock', color: 'orange', noPhoto: true},
+                   {img: selectedGallery.photoFinal, label: '4. Destino Final', sub: selectedGallery.destination, time: selectedGallery.endTime, icon: 'fa-flag-checkered', color: 'emerald'},
                  ].map((ev, idx) => (
-                   ev.img ? (
-                     <div key={idx} className="space-y-2">
-                        <img src={ev.img} className="w-full h-48 object-cover rounded-xl border" />
-                        <div className="text-center">
-                           <p className="text-[10px] font-black uppercase text-gray-400">{ev.label}</p>
-                           <p className="text-xs font-bold text-indigo-600">{ev.time}</p>
-                        </div>
-                     </div>
-                   ) : <div key={idx} className="h-48 bg-gray-50 rounded-xl border border-dashed flex items-center justify-center text-gray-300">N/A</div>
+                   <div key={idx} className="group flex flex-col items-center">
+                      <div className={`w-full aspect-square relative overflow-hidden rounded-[2.5rem] bg-gray-50 border-4 border-transparent hover:border-${ev.color}-400 transition-all duration-500 shadow-xl shadow-gray-200/50 flex flex-col items-center justify-center`}>
+                         {ev.noPhoto ? (
+                           <div className="flex flex-col items-center justify-center text-orange-400">
+                             <i className={`fas ${ev.icon} text-6xl mb-4 opacity-40`}></i>
+                             <span className="text-[12px] font-black tracking-widest uppercase">Somente Horário</span>
+                           </div>
+                         ) : ev.img ? (
+                           <img src={ev.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s]" alt={ev.label} />
+                         ) : (
+                           <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
+                             <i className={`fas ${ev.icon} text-5xl mb-3 opacity-20`}></i>
+                             <span className="text-[10px] font-black tracking-widest uppercase">Sem Registro</span>
+                           </div>
+                         )}
+                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      </div>
+                      <div className="mt-6 text-center w-full">
+                         <p className={`text-[10px] font-black uppercase text-${ev.color}-500 tracking-[0.2em] mb-1`}>{ev.label}</p>
+                         <h4 className="text-sm font-black text-gray-900 uppercase truncate leading-tight mb-3">{ev.sub || '---'}</h4>
+                         <div className="inline-flex items-center bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100 shadow-inner">
+                            <i className={`fas fa-clock text-[11px] text-${ev.color}-300 mr-2`}></i>
+                            <span className="text-sm font-black text-gray-800 font-mono tracking-tighter">{ev.time || '--:--'}</span>
+                         </div>
+                      </div>
+                   </div>
                  ))}
+              </div>
+
+              <div className="mt-12 bg-gray-900 p-8 rounded-[3rem] text-white flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
+                 <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-white/10 rounded-3xl flex items-center justify-center text-2xl font-black">
+                       <i className="fas fa-route text-indigo-400"></i>
+                    </div>
+                    <div>
+                       <span className="text-[10px] font-black uppercase opacity-40 block tracking-widest mb-1">Cálculo de Auditoria</span>
+                       <span className="text-3xl font-black tracking-tighter">Distância: {(selectedGallery.kmFinal || 0) - selectedGallery.kmInitial} KM</span>
+                    </div>
+                 </div>
+                 <div className="grid grid-cols-2 gap-x-12 gap-y-2 border-l border-white/10 pl-12 text-right">
+                    <p className="text-[10px] font-black uppercase opacity-30 tracking-widest text-left">Leitura Inicial:</p>
+                    <p className="text-sm font-black font-mono">{selectedGallery.kmInitial} KM</p>
+                    <p className="text-[10px] font-black uppercase opacity-30 tracking-widest text-left">Leitura Final:</p>
+                    <p className="text-sm font-black font-mono">{selectedGallery.kmFinal || '--'} KM</p>
+                 </div>
               </div>
            </div>
         </div>
       )}
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Relatório de Frota</h2>
-          <p className="text-gray-500">Histórico detalhado de quilometragem e fotos</p>
+          <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none">Controle de Frota</h2>
+          <p className="text-gray-500 font-bold mt-2 flex items-center">
+             <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+             Monitoramento de horários e rotas aprovadas
+          </p>
         </div>
-        <div className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2">
-           <i className="fas fa-check-double"></i>
-           <span>Auditado: {totalKm} KM</span>
+        <div className="bg-white border-2 border-emerald-50 p-6 rounded-[2rem] shadow-xl shadow-emerald-100/40 flex items-center gap-6">
+           <div className="w-14 h-14 bg-emerald-600 text-white rounded-[1.5rem] flex items-center justify-center text-xl shadow-lg shadow-emerald-200">
+              <i className="fas fa-check-double"></i>
+           </div>
+           <div>
+              <span className="text-[11px] font-black text-emerald-300 uppercase tracking-widest block mb-1">Acumulado Auditado</span>
+              <span className="text-4xl font-black text-emerald-950 tracking-tighter leading-none">{totalKm} <span className="text-sm uppercase opacity-40">KM</span></span>
+           </div>
         </div>
       </div>
 
-      <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-end">
-        <div className="flex-1 min-w-[150px]">
-          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Início</label>
-          <input type="date" value={dateFilter.start} onChange={e => setDateFilter({...dateFilter, start: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 outline-none" />
+      <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-wrap gap-6 items-end">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">De</label>
+          <input type="date" value={dateFilter.start} onChange={e => setDateFilter({...dateFilter, start: e.target.value})} className="w-full p-4.5 border-2 border-gray-50 rounded-2xl text-sm bg-gray-50 focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all outline-none font-bold" />
         </div>
-        <div className="flex-1 min-w-[150px]">
-          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Fim</label>
-          <input type="date" value={dateFilter.end} onChange={e => setDateFilter({...dateFilter, end: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 outline-none" />
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Até</label>
+          <input type="date" value={dateFilter.end} onChange={e => setDateFilter({...dateFilter, end: e.target.value})} className="w-full p-4.5 border-2 border-gray-50 rounded-2xl text-sm bg-gray-50 focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all outline-none font-bold" />
         </div>
-        <button onClick={() => setDateFilter({ start: '', end: '' })} className="px-4 py-2.5 text-sm font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors">Limpar</button>
+        <button onClick={() => setDateFilter({ start: '', end: '' })} className="h-[58px] px-10 text-[12px] font-black text-gray-400 hover:text-indigo-600 uppercase tracking-[0.2em] transition-all hover:bg-indigo-50 rounded-[1.5rem] border-2 border-transparent hover:border-indigo-100">Reset</button>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-[3rem] shadow-xl shadow-gray-200/50 border border-gray-50 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50/50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px]">Período</th>
-                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px]">Motorista / Veículo</th>
-                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px]">Rota</th>
-                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px]">Evidências</th>
-                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px] text-center">Distância</th>
+                <th className="px-10 py-8 font-black text-gray-400 uppercase text-[11px] tracking-[0.2em]">Registro</th>
+                <th className="px-10 py-8 font-black text-gray-400 uppercase text-[11px] tracking-[0.2em]">Condutor</th>
+                <th className="px-10 py-8 font-black text-gray-400 uppercase text-[11px] tracking-[0.2em]">Itinerário</th>
+                <th className="px-10 py-8 font-black text-gray-400 uppercase text-[11px] tracking-[0.2em] text-center">Timeline</th>
+                <th className="px-10 py-8 font-black text-gray-400 uppercase text-[11px] tracking-[0.2em] text-center">Fotos</th>
+                <th className="px-10 py-8 font-black text-gray-400 uppercase text-[11px] tracking-[0.2em] text-center">Saldo KM</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-gray-50">
               {approvedTrips.length === 0 ? (
-                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Nenhum dado encontrado para os filtros selecionados.</td></tr>
+                <tr><td colSpan={6} className="px-10 py-24 text-center text-gray-300 italic font-black text-xl uppercase tracking-widest opacity-30">Sem registros para o período</td></tr>
               ) : (
                 approvedTrips.map(trip => (
-                  <tr key={trip.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-700">{formatDate(trip.date)}</div>
-                      <div className="text-[10px] text-gray-400">{trip.endDate ? `Fim: ${formatDate(trip.endDate)}` : 'Mesmo dia'}</div>
+                  <tr key={trip.id} className="hover:bg-indigo-50/20 transition-all group">
+                    <td className="px-10 py-6">
+                      <div className="font-black text-gray-950 text-xl tracking-tighter">{formatDate(trip.date)}</div>
+                      <div className="flex items-center mt-1">
+                         <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{trip.startTime}</span>
+                         <i className="fas fa-arrow-right mx-2 text-[8px] text-gray-200"></i>
+                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{trip.endTime || 'Em Curso'}</span>
+                      </div>
+                      {trip.endDate && trip.endDate !== trip.date && (
+                        <div className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-2">FIM: {formatDate(trip.endDate)}</div>
+                      )}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900">{trip.driverName}</div>
-                      <div className="text-[10px] font-mono font-bold text-indigo-500">{trip.vehiclePlate}</div>
+                    <td className="px-10 py-6">
+                      <div className="font-black text-gray-900 text-base">{trip.driverName}</div>
+                      <div className="text-[11px] font-black text-indigo-500 bg-indigo-50/50 border border-indigo-100 px-3 py-1 rounded-xl inline-block mt-2 uppercase tracking-widest">{trip.vehiclePlate}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-gray-600 flex items-center">
-                        <span className="font-medium">{trip.origin}</span>
-                        <i className="fas fa-long-arrow-alt-right mx-2 text-gray-300"></i>
-                        <span className="font-medium">{trip.destination}</span>
+                    <td className="px-10 py-6">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center gap-3 text-xs font-bold text-gray-800">
+                           <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                           <span className="text-gray-950">{trip.origin}</span>
+                        </div>
+                        {trip.factoryName && (
+                          <div className="flex items-center gap-3 text-[11px] font-black text-amber-600 bg-amber-50 self-start px-3 py-1 rounded-full border border-amber-100/50">
+                             <i className="fas fa-industry text-[10px]"></i>
+                             <span>{trip.factoryName}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 text-xs font-bold text-gray-800">
+                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                           <span className="text-gray-950">{trip.destination}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <button onClick={() => setSelectedGallery(trip)} className="flex -space-x-2 hover:space-x-1 transition-all">
-                        <img src={trip.photoInitial} className="w-8 h-8 rounded-full border-2 border-white object-cover" />
-                        {trip.factoryArrivalPhoto && <img src={trip.factoryArrivalPhoto} className="w-8 h-8 rounded-full border-2 border-white object-cover" />}
-                        {trip.photoFinal && <img src={trip.photoFinal} className="w-8 h-8 rounded-full border-2 border-white object-cover" />}
-                        <div className="w-8 h-8 rounded-full border-2 border-white bg-indigo-50 flex items-center justify-center text-[10px] text-indigo-600 font-black">+</div>
+                    <td className="px-10 py-6 text-center">
+                       <div className="inline-grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] font-black font-mono">
+                          <span className="text-right text-gray-300 uppercase tracking-widest">Partida:</span>
+                          <span className="text-left text-indigo-600">{trip.startTime}</span>
+                          {trip.factoryArrivalTime && (
+                            <>
+                              <span className="text-right text-gray-300 uppercase tracking-widest">Entrada:</span>
+                              <span className="text-left text-amber-500">{trip.factoryArrivalTime}</span>
+                              <span className="text-right text-gray-300 uppercase tracking-widest">Saída:</span>
+                              <span className="text-left text-orange-600">{trip.factoryDepartureTime}</span>
+                            </>
+                          )}
+                          <span className="text-right text-gray-300 uppercase tracking-widest">Chegada:</span>
+                          <span className="text-left text-emerald-600">{trip.endTime}</span>
+                       </div>
+                    </td>
+                    <td className="px-10 py-6 text-center">
+                      <button onClick={() => setSelectedGallery(trip)} className="inline-flex p-2 bg-white rounded-[1.25rem] border-2 border-gray-100 shadow-sm hover:border-indigo-400 hover:shadow-indigo-100 transition-all -space-x-5 hover:space-x-1">
+                        <img src={trip.photoInitial} className="w-10 h-10 rounded-xl border-2 border-white object-cover shadow-sm" />
+                        {trip.factoryArrivalPhoto && <img src={trip.factoryArrivalPhoto} className="w-10 h-10 rounded-xl border-2 border-white object-cover shadow-sm" />}
+                        {trip.photoFinal && <img src={trip.photoFinal} className="w-10 h-10 rounded-xl border-2 border-white object-cover shadow-sm" />}
+                        <div className="w-10 h-10 rounded-xl border-2 border-white bg-indigo-600 flex items-center justify-center text-[10px] text-white font-black shadow-lg shadow-indigo-100">+</div>
                       </button>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="px-4 py-1.5 bg-gray-100 text-gray-800 font-black rounded-xl text-xs border">
+                    <td className="px-10 py-6 text-center">
+                      <div className="bg-gray-50 text-gray-950 font-black px-6 py-3 rounded-2xl border border-gray-100 text-sm shadow-inner group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-500 transition-all duration-300 tracking-tight">
                         {(trip.kmFinal || 0) - trip.kmInitial} KM
-                      </span>
+                      </div>
                     </td>
                   </tr>
                 ))
