@@ -15,37 +15,62 @@ const App: React.FC = () => {
   const [view, setView] = useState<'dashboard' | 'reports'>('dashboard');
   
   const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('trip_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    try {
+      const saved = localStorage.getItem('trip_users');
+      return saved ? JSON.parse(saved) : INITIAL_USERS;
+    } catch (e) {
+      return INITIAL_USERS;
+    }
   });
 
   const [auth, setAuth] = useState<AuthState>(() => {
-    const saved = localStorage.getItem('trip_auth');
-    return saved ? JSON.parse(saved) : { user: null, isAuthenticated: false };
+    try {
+      const saved = localStorage.getItem('trip_auth');
+      return saved ? JSON.parse(saved) : { user: null, isAuthenticated: false };
+    } catch (e) {
+      return { user: null, isAuthenticated: false };
+    }
   });
 
   const [trips, setTrips] = useState<Trip[]>(() => {
-    const saved = localStorage.getItem('trip_data');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('trip_data');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
-    localStorage.setItem('trip_auth', JSON.stringify(auth));
+    try {
+      localStorage.setItem('trip_auth', JSON.stringify(auth));
+    } catch (e) {
+      console.warn("Falha ao salvar autenticação localmente.");
+    }
   }, [auth]);
 
   useEffect(() => {
-    localStorage.setItem('trip_data', JSON.stringify(trips));
+    try {
+      localStorage.setItem('trip_data', JSON.stringify(trips));
+    } catch (e) {
+      console.error("Limite de armazenamento excedido (fotos muito pesadas).");
+      // Mesmo com erro no storage, o estado 'trips' continua vivo na memória do app
+    }
   }, [trips]);
 
   useEffect(() => {
-    localStorage.setItem('trip_users', JSON.stringify(users));
+    try {
+      localStorage.setItem('trip_users', JSON.stringify(users));
+    } catch (e) {
+      console.warn("Falha ao salvar usuários localmente.");
+    }
   }, [users]);
 
   const sendMockEmail = (to: string, subject: string, message: string) => {
     const newNotif: Notification = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 9),
       to,
       subject,
       message,
@@ -61,7 +86,6 @@ const App: React.FC = () => {
   const handleRegister = (newUser: User) => {
     setUsers(prev => {
       const updated = [...prev, newUser];
-      localStorage.setItem('trip_users', JSON.stringify(updated));
       return updated;
     });
   };

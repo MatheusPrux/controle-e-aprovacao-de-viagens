@@ -27,6 +27,10 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
     return 'start';
   };
 
+  const generateId = () => {
+    return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+  };
+
   const [mode, setMode] = useState(getInitialStep());
   const [formData, setFormData] = useState({
     date: existingTrip?.date || new Date().toISOString().split('T')[0],
@@ -52,15 +56,21 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    const updateTime = () => {
       setCurrentAutoTime(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
-    }, 1000);
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setError('A foto é muito grande. Tente tirar uma foto com resolução menor.');
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => setFormData(prev => ({ ...prev, [field]: reader.result as string }));
       reader.readAsDataURL(file);
@@ -77,7 +87,7 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
         return;
       }
       onSubmit({
-        id: crypto.randomUUID(),
+        id: generateId(),
         driverId: user.id,
         driverName: user.name,
         vehiclePlate: formData.vehiclePlate,
@@ -89,44 +99,51 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
         status: 'Em Andamento',
         createdAt: new Date().toISOString(),
       });
-    } else if (mode === 'arrival') {
-      if (!formData.factoryArrivalPhoto) {
-        setError('A foto da chegada é obrigatória.');
+    } else {
+      if (!existingTrip) {
+        setError('Erro interno: dados da viagem não encontrados.');
         return;
       }
-      onSubmit({
-        ...existingTrip!,
-        factoryName: formData.factoryName,
-        factoryArrivalTime: currentAutoTime,
-        factoryArrivalPhoto: formData.factoryArrivalPhoto,
-        status: 'Na Fábrica'
-      });
-    } else if (mode === 'departure') {
-      onSubmit({
-        ...existingTrip!,
-        factoryDepartureTime: currentAutoTime,
-        status: 'Em Trânsito'
-      });
-    } else if (mode === 'finish') {
-      if (!formData.destination || !formData.kmFinal || !formData.photoFinal) {
-        setError('Preencha os campos de finalização.');
-        return;
+
+      if (mode === 'arrival') {
+        if (!formData.factoryArrivalPhoto) {
+          setError('A foto da chegada é obrigatória.');
+          return;
+        }
+        onSubmit({
+          ...existingTrip,
+          factoryName: formData.factoryName,
+          factoryArrivalTime: currentAutoTime,
+          factoryArrivalPhoto: formData.factoryArrivalPhoto,
+          status: 'Na Fábrica'
+        });
+      } else if (mode === 'departure') {
+        onSubmit({
+          ...existingTrip,
+          factoryDepartureTime: currentAutoTime,
+          status: 'Em Trânsito'
+        });
+      } else if (mode === 'finish') {
+        if (!formData.destination || !formData.kmFinal || !formData.photoFinal) {
+          setError('Preencha os campos de finalização.');
+          return;
+        }
+        const initial = Number(existingTrip.kmInitial);
+        const final = Number(formData.kmFinal);
+        if (final <= initial) {
+          setError('O KM Final deve ser maior que o Inicial.');
+          return;
+        }
+        onSubmit({
+          ...existingTrip,
+          kmFinal: final,
+          photoFinal: formData.photoFinal,
+          destination: formData.destination,
+          endTime: currentAutoTime,
+          endDate: formData.endDate,
+          status: 'Pendente'
+        });
       }
-      const initial = Number(existingTrip?.kmInitial);
-      const final = Number(formData.kmFinal);
-      if (final <= initial) {
-        setError('O KM Final deve ser maior que o Inicial.');
-        return;
-      }
-      onSubmit({
-        ...existingTrip!,
-        kmFinal: final,
-        photoFinal: formData.photoFinal,
-        destination: formData.destination,
-        endTime: currentAutoTime,
-        endDate: formData.endDate,
-        status: 'Pendente'
-      });
     }
   };
 
@@ -152,7 +169,7 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
             </h2>
             <p className="text-white/70 text-[10px] uppercase font-bold tracking-widest mt-1">Status: {mode}</p>
           </div>
-          <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition-colors">
+          <button onClick={onClose} type="button" className="hover:bg-white/20 p-2 rounded-full transition-colors">
             <i className="fas fa-times text-xl"></i>
           </button>
         </div>
@@ -257,7 +274,7 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
               <div className="bg-orange-600 p-8 rounded-[2rem] text-white text-center shadow-lg shadow-orange-100">
                  <span className="text-[10px] font-black uppercase opacity-60 block mb-2 tracking-widest">Saindo de</span>
                  <span className="font-black text-3xl uppercase tracking-tight block">{existingTrip?.factoryName}</span>
-                 <p className="text-[10px] font-bold mt-4 opacity-80 uppercase tracking-tighter italic">Nesta etapa, apenas confirme o horário de saída para prosseguir.</p>
+                 <p className="text-[10px] font-bold mt-4 opacity-80 uppercase tracking-tighter italic">Confirme o horário de saída para prosseguir.</p>
               </div>
             </div>
           )}
@@ -266,7 +283,7 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Data Final <span className="text-emerald-500">(Opcional)</span></label>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Data Final (Opcional)</label>
                   <input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} className="w-full p-4 border border-gray-200 rounded-2xl text-sm bg-gray-50 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-100 transition-all outline-none" />
                 </div>
                 <div>
