@@ -60,7 +60,11 @@ const App: React.FC = () => {
   };
 
   const handleRegister = (newUser: User) => {
-    setUsers(prev => [...prev, newUser]);
+    setUsers(prev => {
+      const updated = [...prev, newUser];
+      localStorage.setItem('trip_users', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleLogout = () => {
@@ -70,7 +74,6 @@ const App: React.FC = () => {
 
   const addTrip = (trip: Trip) => {
     setTrips(prev => [trip, ...prev]);
-    // Notify admin
     const admins = users.filter(u => u.role === 'admin');
     admins.forEach(admin => {
       sendMockEmail(admin.email, 'Nova Solicitação de Viagem', `O motorista ${trip.driverName} cadastrou uma nova viagem de ${trip.origin} para ${trip.destination}.`);
@@ -81,7 +84,6 @@ const App: React.FC = () => {
     setTrips(prev => prev.map(t => {
       if (t.id === tripId) {
         const updatedTrip = { ...t, status, adminComment: comment };
-        // Notify driver
         const driver = users.find(u => u.id === t.driverId);
         if (driver) {
           sendMockEmail(driver.email, `Viagem ${status}`, `Sua solicitação de ${t.origin} para ${t.destination} foi ${status.toLowerCase()}.\nComentário do Admin: ${comment || 'Sem comentários.'}`);
@@ -97,7 +99,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen bg-gray-200 pb-10">
       <nav className="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-6">
@@ -138,7 +140,6 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* Notificação Toast Mockup */}
       {notifications.length > 0 && (
         <div className="fixed bottom-4 right-4 z-[100] w-80 space-y-2">
           {notifications.slice(0, 1).map(n => (
