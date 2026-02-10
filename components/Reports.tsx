@@ -7,31 +7,17 @@ interface ReportsProps {
 }
 
 const Reports: React.FC<ReportsProps> = ({ trips }) => {
-  const [dateFilter, setDateFilter] = useState({
-    start: '',
-    end: ''
-  });
+  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+  const [selectedGallery, setSelectedGallery] = useState<Trip | null>(null);
 
   const approvedTrips = useMemo(() => {
     let filtered = trips.filter(t => t.status === 'Aprovado');
-    
-    if (dateFilter.start) {
-      filtered = filtered.filter(t => t.date >= dateFilter.start);
-    }
-    if (dateFilter.end) {
-      filtered = filtered.filter(t => t.date <= dateFilter.end);
-    }
-
+    if (dateFilter.start) filtered = filtered.filter(t => t.date >= dateFilter.start);
+    if (dateFilter.end) filtered = filtered.filter(t => t.date <= dateFilter.end);
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [trips, dateFilter]);
 
-  const totalKm = useMemo(() => {
-    return approvedTrips.reduce((acc, t) => acc + ((t.kmFinal || 0) - t.kmInitial), 0);
-  }, [approvedTrips]);
-
-  const handleExport = () => {
-    alert('Exportação gerada com as métricas de veículo, datas e horários auditados.');
-  };
+  const totalKm = useMemo(() => approvedTrips.reduce((acc, t) => acc + ((t.kmFinal || 0) - t.kmInitial), 0), [approvedTrips]);
 
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-');
@@ -40,102 +26,104 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Relatório de Logística</h2>
-          <p className="text-gray-500">Métricas de frota e quilometragem auditada</p>
+      {selectedGallery && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6" onClick={() => setSelectedGallery(null)}>
+           <div className="bg-white p-6 rounded-3xl w-full max-w-4xl" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                 <div>
+                    <h3 className="text-xl font-black text-gray-800">Galeria de Evidências</h3>
+                    <p className="text-sm text-gray-500">{selectedGallery.driverName} • {selectedGallery.vehiclePlate}</p>
+                 </div>
+                 <button onClick={() => setSelectedGallery(null)} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200"><i className="fas fa-times"></i></button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                 {[
+                   {img: selectedGallery.photoInitial, label: 'Partida', time: selectedGallery.startTime},
+                   {img: selectedGallery.factoryArrivalPhoto, label: 'Chegada Fáb.', time: selectedGallery.factoryArrivalTime},
+                   {img: selectedGallery.factoryDeparturePhoto, label: 'Saída Fáb.', time: selectedGallery.factoryDepartureTime},
+                   {img: selectedGallery.photoFinal, label: 'Destino', time: selectedGallery.endTime},
+                 ].map((ev, idx) => (
+                   ev.img ? (
+                     <div key={idx} className="space-y-2">
+                        <img src={ev.img} className="w-full h-48 object-cover rounded-xl border" />
+                        <div className="text-center">
+                           <p className="text-[10px] font-black uppercase text-gray-400">{ev.label}</p>
+                           <p className="text-xs font-bold text-indigo-600">{ev.time}</p>
+                        </div>
+                     </div>
+                   ) : <div key={idx} className="h-48 bg-gray-50 rounded-xl border border-dashed flex items-center justify-center text-gray-300">N/A</div>
+                 ))}
+              </div>
+           </div>
         </div>
-        <button
-          onClick={handleExport}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center space-x-2 shadow-lg hover:bg-emerald-700 transition-all active:scale-95"
-        >
-          <i className="fas fa-file-csv"></i>
-          <span>Exportar Relatório</span>
-        </button>
+      )}
+
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Relatório de Frota</h2>
+          <p className="text-gray-500">Histórico detalhado de quilometragem e fotos</p>
+        </div>
+        <div className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg flex items-center gap-2">
+           <i className="fas fa-check-double"></i>
+           <span>Auditado: {totalKm} KM</span>
+        </div>
       </div>
 
       <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Início do Período</label>
-          <input 
-            type="date" 
-            value={dateFilter.start}
-            onChange={(e) => setDateFilter(prev => ({ ...prev, start: e.target.value }))}
-            className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"
-          />
+          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Início</label>
+          <input type="date" value={dateFilter.start} onChange={e => setDateFilter({...dateFilter, start: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 outline-none" />
         </div>
         <div className="flex-1 min-w-[150px]">
-          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Fim do Período</label>
-          <input 
-            type="date" 
-            value={dateFilter.end}
-            onChange={(e) => setDateFilter(prev => ({ ...prev, end: e.target.value }))}
-            className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none"
-          />
+          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Fim</label>
+          <input type="date" value={dateFilter.end} onChange={e => setDateFilter({...dateFilter, end: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 outline-none" />
         </div>
-        <button 
-          onClick={() => setDateFilter({ start: '', end: '' })}
-          className="px-4 py-2.5 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest"
-        >
-          Reset
-        </button>
-        
-        <div className="w-full sm:w-auto ml-auto pt-2 sm:pt-0">
-           <div className="bg-indigo-600 px-6 py-3 rounded-2xl shadow-xl shadow-indigo-100 flex items-center justify-between sm:justify-start sm:space-x-4 text-white">
-              <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Total Auditoria</span>
-              <span className="text-xl font-black">{totalKm} KM</span>
-           </div>
-        </div>
+        <button onClick={() => setDateFilter({ start: '', end: '' })} className="px-4 py-2.5 text-sm font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest transition-colors">Limpar</button>
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-6 py-5 font-bold text-gray-600">Veículo</th>
-                <th className="px-6 py-5 font-bold text-gray-600">Motorista</th>
-                <th className="px-6 py-5 font-bold text-gray-600">Período</th>
-                <th className="px-6 py-5 font-bold text-gray-600">Origem → Destino</th>
-                <th className="px-6 py-5 font-bold text-gray-600 text-center">Distância</th>
+                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px]">Período</th>
+                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px]">Motorista / Veículo</th>
+                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px]">Rota</th>
+                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px]">Evidências</th>
+                <th className="px-6 py-5 font-bold text-gray-400 uppercase text-[10px] text-center">Distância</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y">
               {approvedTrips.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center text-gray-400 italic">
-                    Nenhuma viagem auditada para este período.
-                  </td>
-                </tr>
+                <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic">Nenhum dado encontrado para os filtros selecionados.</td></tr>
               ) : (
                 approvedTrips.map(trip => (
-                  <tr key={trip.id} className="hover:bg-indigo-50/20 transition-colors">
+                  <tr key={trip.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 font-mono font-bold rounded-lg text-xs">
-                        {trip.vehiclePlate}
-                      </span>
+                      <div className="font-bold text-gray-700">{formatDate(trip.date)}</div>
+                      <div className="text-[10px] text-gray-400">{trip.endDate ? `Fim: ${formatDate(trip.endDate)}` : 'Mesmo dia'}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-bold text-gray-800">{trip.driverName}</div>
-                      <div className="text-[10px] text-indigo-500 font-bold uppercase">Aprovado</div>
+                      <div className="font-bold text-gray-900">{trip.driverName}</div>
+                      <div className="text-[10px] font-mono font-bold text-indigo-500">{trip.vehiclePlate}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-xs font-bold text-gray-700">
-                        {formatDate(trip.date)} {trip.startTime}
-                      </div>
-                      <div className="text-xs font-medium text-gray-400">
-                        Até {trip.endDate ? formatDate(trip.endDate) : formatDate(trip.date)} {trip.endTime}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-gray-700 font-medium">
-                        <span className="text-indigo-600 font-bold">{trip.origin}</span>
+                      <div className="text-gray-600 flex items-center">
+                        <span className="font-medium">{trip.origin}</span>
                         <i className="fas fa-long-arrow-alt-right mx-2 text-gray-300"></i>
-                        <span className="text-purple-600 font-bold">{trip.destination}</span>
+                        <span className="font-medium">{trip.destination}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button onClick={() => setSelectedGallery(trip)} className="flex -space-x-2 hover:space-x-1 transition-all">
+                        <img src={trip.photoInitial} className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+                        {trip.factoryArrivalPhoto && <img src={trip.factoryArrivalPhoto} className="w-8 h-8 rounded-full border-2 border-white object-cover" />}
+                        {trip.photoFinal && <img src={trip.photoFinal} className="w-8 h-8 rounded-full border-2 border-white object-cover" />}
+                        <div className="w-8 h-8 rounded-full border-2 border-white bg-indigo-50 flex items-center justify-center text-[10px] text-indigo-600 font-black">+</div>
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 font-black rounded-xl text-xs border border-indigo-100">
+                      <span className="px-4 py-1.5 bg-gray-100 text-gray-800 font-black rounded-xl text-xs border">
                         {(trip.kmFinal || 0) - trip.kmInitial} KM
                       </span>
                     </td>

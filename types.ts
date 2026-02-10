@@ -9,7 +9,7 @@ export interface User {
   password?: string;
 }
 
-export type TripStatus = 'Em Andamento' | 'Pendente' | 'Aprovado' | 'Rejeitado';
+export type TripStatus = 'Em Andamento' | 'Na Fábrica' | 'Em Trânsito' | 'Pendente' | 'Aprovado' | 'Rejeitado';
 
 export interface Trip {
   id: string;
@@ -17,14 +17,20 @@ export interface Trip {
   driverName: string;
   vehiclePlate: string;
   
-  // Part 1 (Obrigatório no Início)
+  // Part 1 (Início)
   date: string;
   kmInitial: number;
   photoInitial: string; 
   startTime: string; 
   origin: string;
 
-  // Part 2 (Obrigatório na Finalização)
+  // Fábrica (Etapas Intermediárias)
+  factoryArrivalTime?: string;
+  factoryArrivalPhoto?: string;
+  factoryDepartureTime?: string;
+  factoryDeparturePhoto?: string;
+
+  // Part 2 (Finalização)
   kmFinal?: number;
   photoFinal?: string; 
   endTime?: string; 
