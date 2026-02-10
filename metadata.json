@@ -1,0 +1,5 @@
+{
+  "name": "Trip Approval System",
+  "description": "A comprehensive system for managing and approving travel requests with driver and administrator roles, featuring trip tracking, status updates, and user authentication.",
+  "requestFramePermissions": []
+}
