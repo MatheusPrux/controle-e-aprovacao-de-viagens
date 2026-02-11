@@ -6,7 +6,8 @@ import DashboardDriver from './components/DashboardDriver';
 import DashboardAdmin from './components/DashboardAdmin';
 import Reports from './components/Reports';
 
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwgH9mmNbSqnPgS6nevovoN6z-ZeVkiqGFaxsuntd-lgKTEIOfLQRXI0QblMYgKX6I-lw/exec';
+// URL da Web App vinculada à conta Filler
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz0m8ogQreDFsW9IXPdRSzUIPsMSqI7BFD3ZqcyIM4GdgT4_UG9spNFiJCX7V6mHqZJOw/exec';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'dashboard' | 'reports' | 'users'>('dashboard');
@@ -80,20 +81,23 @@ const App: React.FC = () => {
 
   const syncTripWithSheets = async (trip: Trip) => {
     try {
-      // Garantir que campos numéricos sejam de fato números e datas sejam strings puras
+      // Objeto higienizado para envio à Planilha (Colunas A-V)
       const sanitizedTrip = {
         ...trip,
         id: String(trip.id),
         kmInitial: Number(trip.kmInitial) || 0,
-        kmFinal: trip.kmFinal ? Number(trip.kmFinal) : undefined,
-        valor_comissao: trip.valor_comissao ? Number(trip.valor_comissao) : undefined,
-        // Certificar que não há objetos Date, apenas strings ISO ou formatadas
+        kmFinal: trip.kmFinal ? Number(trip.kmFinal) : 0,
+        valor_comissao: trip.valor_comissao ? Number(trip.valor_comissao) : 0,
+        // Garantindo que as fotos (Base64 ou Links) sejam incluídas no POST
+        photoInitial: trip.photoInitial || '',
+        factoryArrivalPhoto: trip.factoryArrivalPhoto || '',
+        photoFinal: trip.photoFinal || '',
         createdAt: typeof trip.createdAt === 'string' ? trip.createdAt : new Date().toISOString()
       };
 
       await fetch(WEB_APP_URL, {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'no-cors', // Necessário para Google Apps Script
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'saveTrip',
