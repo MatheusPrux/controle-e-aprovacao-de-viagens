@@ -95,7 +95,8 @@ const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTri
                     <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase">{trip.vehiclePlate}</span>
                   </div>
                   <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-lg">
-                    {formatDate(trip.date)}
+                    {/* Fix: use startDate instead of date */}
+                    {formatDate(trip.startDate)}
                   </span>
                 </div>
 

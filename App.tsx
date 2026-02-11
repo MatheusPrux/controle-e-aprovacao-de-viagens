@@ -65,7 +65,6 @@ const App: React.FC = () => {
       const result = await response.json();
 
       if (result.success && result.user) {
-        // Garantindo que o role venha corretamente da API
         setAuth({ 
           user: result.user, 
           isAuthenticated: true 
@@ -103,8 +102,16 @@ const App: React.FC = () => {
   };
 
   const addTrip = (trip: Trip) => {
-    setTrips(prev => [trip, ...prev]);
-    syncTripWithSheets(trip);
+    // Cálculo do ID Sequencial com base na lista atual
+    const maxId = trips.reduce((max, t) => {
+      const idNum = parseInt(t.id);
+      return !isNaN(idNum) ? Math.max(max, idNum) : max;
+    }, 0);
+    
+    const tripWithId = { ...trip, id: (maxId + 1).toString() };
+    
+    setTrips(prev => [tripWithId, ...prev]);
+    syncTripWithSheets(tripWithId);
   };
 
   const updateExistingTrip = (updatedTrip: Trip) => {
@@ -112,7 +119,7 @@ const App: React.FC = () => {
     syncTripWithSheets(updatedTrip);
   };
 
-  const updateTripStatus = (tripId: string, status: TripStatus, comment: string, extras?: { dtNumber?: string, tripValue?: number }) => {
+  const updateTripStatus = (tripId: string, status: TripStatus, comment: string, extras?: { numero_dt?: string, valor_comissao?: number }) => {
     setTrips(prev => {
       return prev.map(t => {
         if (t.id === tripId) {
@@ -143,7 +150,7 @@ const App: React.FC = () => {
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('dashboard')}>
               <i className="fas fa-car-side text-2xl"></i>
-              <h1 className="text-xl font-bold tracking-tight text-white uppercase">SISTEMA</h1>
+              <h1 className="text-xl font-bold tracking-tight text-white uppercase">LOGÍSTICA</h1>
             </div>
             {isStaff && (
               <div className="flex space-x-2 ml-4">
@@ -177,7 +184,7 @@ const App: React.FC = () => {
                 {auth.user.role === 'super_admin' ? 'Super Admin' : auth.user.role === 'manager' ? 'Manager' : 'Motorista'}
               </p>
             </div>
-            <button onClick={handleLogout} className="bg-indigo-700 hover:bg-red-500 w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-lg">
+            <button onClick={handleLogout} className="bg-indigo-700 hover:bg-red-500 w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-lg active:scale-95">
               <i className="fas fa-power-off"></i>
             </button>
           </div>
@@ -188,13 +195,13 @@ const App: React.FC = () => {
         {loadingTrips && trips.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-indigo-600">
             <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-            <p className="font-black uppercase tracking-[0.2em] text-[10px] mt-6 opacity-60">Sincronizando...</p>
+            <p className="font-black uppercase tracking-[0.2em] text-[10px] mt-6 opacity-60">Sincronizando com a Planilha...</p>
           </div>
         ) : view === 'users' && auth.user.role === 'super_admin' ? (
           <div className="bg-white p-12 rounded-[3rem] shadow-xl text-center">
              <i className="fas fa-users-cog text-5xl text-gray-200 mb-6"></i>
              <h2 className="text-2xl font-black uppercase mb-2">Gestão de Usuários</h2>
-             <p className="text-gray-400 font-bold mb-8">Disponível em breve para Super Admins</p>
+             <p className="text-gray-400 font-bold mb-8">Esta funcionalidade está sendo mapeada para a planilha de usuários.</p>
              <button onClick={() => setView('dashboard')} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest">Voltar</button>
           </div>
         ) : view === 'reports' && isStaff ? (

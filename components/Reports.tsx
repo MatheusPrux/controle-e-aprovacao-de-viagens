@@ -12,9 +12,11 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
 
   const approvedTrips = useMemo(() => {
     let filtered = trips.filter(t => t.status === 'Aprovado');
-    if (dateFilter.start) filtered = filtered.filter(t => t.date >= dateFilter.start);
-    if (dateFilter.end) filtered = filtered.filter(t => t.date <= dateFilter.end);
-    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Fix: use startDate instead of date for filtering
+    if (dateFilter.start) filtered = filtered.filter(t => t.startDate >= dateFilter.start);
+    if (dateFilter.end) filtered = filtered.filter(t => t.startDate <= dateFilter.end);
+    // Fix: use startDate instead of date for sorting
+    return filtered.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   }, [trips, dateFilter]);
 
   const totalKm = useMemo(() => approvedTrips.reduce((acc, t) => acc + ((t.kmFinal || 0) - t.kmInitial), 0), [approvedTrips]);
@@ -152,13 +154,15 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
                 approvedTrips.map(trip => (
                   <tr key={trip.id} className="hover:bg-indigo-50/20 transition-all group">
                     <td className="px-10 py-6">
-                      <div className="font-black text-gray-950 text-xl tracking-tighter">{formatDate(trip.date)}</div>
+                      {/* Fix: use startDate instead of date */}
+                      <div className="font-black text-gray-950 text-xl tracking-tighter">{formatDate(trip.startDate)}</div>
                       <div className="flex items-center mt-1">
                          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{trip.startTime}</span>
                          <i className="fas fa-arrow-right mx-2 text-[8px] text-gray-200"></i>
                          <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{trip.endTime || 'Em Curso'}</span>
                       </div>
-                      {trip.endDate && trip.endDate !== trip.date && (
+                      {/* Fix: use startDate instead of date */}
+                      {trip.endDate && trip.endDate !== trip.startDate && (
                         <div className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-2">FIM: {formatDate(trip.endDate)}</div>
                       )}
                     </td>
