@@ -19,12 +19,36 @@ const DashboardAdmin: React.FC<DashboardAdminProps> = ({ trips, userRole, onUpda
     return trips.filter(t => t && t.status === 'Aprovado');
   }, [trips, filterMode]);
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length < 3) return dateStr;
-    const [year, month, day] = parts;
-    return `${day}/${month}/${year}`;
+  // Função para limpar e formatar datas (DD/MM/YYYY)
+  const formatDateDisplay = (dateStr: string | undefined) => {
+    if (!dateStr) return '--/--/----';
+    // Remove qualquer sufixo de hora ou ISO (T03:00...)
+    const dateOnly = dateStr.split('T')[0];
+    const parts = dateOnly.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day}/${month}/${year}`;
+    }
+    return dateOnly;
+  };
+
+  // Função para limpar e formatar horas (HH:mm)
+  const formatTimeDisplay = (timeVal: string | undefined) => {
+    if (!timeVal) return '--:--';
+    const val = String(timeVal);
+    
+    // Se for uma string ISO ou contiver 1899 (comum em planilhas)
+    if (val.includes('T')) {
+      const timePart = val.split('T')[1];
+      return timePart.substring(0, 5);
+    }
+    
+    // Retorna os primeiros 5 caracteres se parecer com horário (HH:mm)
+    if (/^\d{2}:\d{2}/.test(val)) {
+      return val.substring(0, 5);
+    }
+    
+    return val;
   };
 
   const handleAction = (tripId: string, status: TripStatus) => {
@@ -38,9 +62,8 @@ const DashboardAdmin: React.FC<DashboardAdminProps> = ({ trips, userRole, onUpda
       }
     }
 
-    // Limpeza rigorosa: Coluna Q (DT) como string numérica limpa, Coluna R (Comissão) como Number
-    const cleanDt = finance.dt.replace(/\D/g, ''); // Apenas números para a DT
-    const cleanVal = Number(finance.val.replace(',', '.')); // Conversão segura para número
+    const cleanDt = finance.dt.replace(/\D/g, ''); 
+    const cleanVal = Number(finance.val.replace(',', '.'));
 
     onUpdateStatus(tripId, status, comment, {
       numero_dt: cleanDt,
@@ -96,7 +119,10 @@ const DashboardAdmin: React.FC<DashboardAdminProps> = ({ trips, userRole, onUpda
           </div>
         ) : (
           filteredTrips.map((trip) => {
-            const kmDiff = Number(trip.kmFinal || 0) - Number(trip.kmInitial || 0);
+            const kmInitial = Number(trip.kmInitial) || 0;
+            const kmFinal = Number(trip.kmFinal) || 0;
+            const kmDiff = kmFinal - kmInitial;
+            
             return (
               <div key={trip.id} className="bg-white rounded-[3rem] shadow-xl border border-gray-50 overflow-hidden">
                 <div className="bg-gray-50/50 p-8 border-b flex justify-between items-center flex-wrap gap-6">
@@ -106,7 +132,7 @@ const DashboardAdmin: React.FC<DashboardAdminProps> = ({ trips, userRole, onUpda
                     </div>
                     <div>
                         <p className="font-black text-gray-950 text-xl tracking-tight leading-none">{trip.driverName}</p>
-                        <span className="text-[10px] font-black text-indigo-500 uppercase mt-2 block">{trip.vehiclePlate} • {formatDate(trip.startDate)}</span>
+                        <span className="text-[10px] font-black text-indigo-500 uppercase mt-2 block">{trip.vehiclePlate} • {formatDateDisplay(trip.startDate)}</span>
                     </div>
                   </div>
                   <div className="bg-white px-5 py-2 rounded-xl border border-gray-100 shadow-sm text-center">
@@ -119,19 +145,19 @@ const DashboardAdmin: React.FC<DashboardAdminProps> = ({ trips, userRole, onUpda
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                     <div onClick={() => setSelectedPhoto(trip.photoInitial || null)} className="relative group cursor-pointer aspect-square rounded-[2rem] overflow-hidden bg-gray-100 shadow-md">
                       {trip.photoInitial ? <img src={trip.photoInitial} className="w-full h-full object-cover group-hover:scale-110 transition-transform" /> : <div className="flex h-full items-center justify-center text-gray-300">SEM FOTO</div>}
-                      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-xl text-[10px] text-white font-bold">SAÍDA: {trip.startTime}</div>
+                      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-xl text-[10px] text-white font-bold uppercase">SAÍDA: {formatTimeDisplay(trip.startTime)}</div>
                     </div>
                     <div onClick={() => setSelectedPhoto(trip.factoryArrivalPhoto || '')} className="relative group cursor-pointer aspect-square rounded-[2rem] overflow-hidden bg-gray-100 shadow-md">
                       {trip.factoryArrivalPhoto ? <img src={trip.factoryArrivalPhoto} className="w-full h-full object-cover" /> : <div className="flex h-full items-center justify-center text-gray-300 text-[10px] font-bold">SEM FOTO FÁBRICA</div>}
-                      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-xl text-[10px] text-white font-bold">CHEGADA: {trip.factoryArrivalTime}</div>
+                      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-xl text-[10px] text-white font-bold uppercase">CHEGADA: {formatTimeDisplay(trip.factoryArrivalTime)}</div>
                     </div>
                     <div className="aspect-square rounded-[2rem] bg-orange-50 border-2 border-orange-100 flex flex-col items-center justify-center text-orange-600">
-                      <span className="text-2xl font-black tracking-tighter">{trip.factoryDepartureTime || '--:--'}</span>
+                      <span className="text-2xl font-black tracking-tighter">{formatTimeDisplay(trip.factoryDepartureTime)}</span>
                       <span className="text-[9px] font-black uppercase tracking-widest">SAÍDA FÁBRICA</span>
                     </div>
                     <div onClick={() => setSelectedPhoto(trip.photoFinal || '')} className="relative group cursor-pointer aspect-square rounded-[2rem] overflow-hidden bg-gray-100 shadow-md">
                       {trip.photoFinal ? <img src={trip.photoFinal} className="w-full h-full object-cover" /> : <div className="flex h-full items-center justify-center text-gray-300 text-[10px] font-bold">SEM FOTO FINAL</div>}
-                      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-xl text-[10px] text-white font-bold">FIM: {trip.endTime}</div>
+                      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1 rounded-xl text-[10px] text-white font-bold uppercase">FIM: {formatTimeDisplay(trip.endTime)}</div>
                     </div>
                   </div>
 
@@ -174,11 +200,11 @@ const DashboardAdmin: React.FC<DashboardAdminProps> = ({ trips, userRole, onUpda
                         <div className="bg-indigo-900 rounded-[2rem] p-6 text-white mb-6 shadow-inner">
                           <div className="flex justify-between items-center">
                               <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Resumo KM</span>
-                              <span className="text-indigo-400 font-black">{isNaN(kmDiff) ? 0 : kmDiff} KM PERCORRIDO</span>
+                              <span className="text-indigo-400 font-black">{(isNaN(kmDiff) || kmDiff < 0) ? 0 : kmDiff} KM PERCORRIDO</span>
                           </div>
                           <div className="grid grid-cols-2 gap-4 mt-4">
-                              <div><p className="text-[9px] opacity-40 uppercase">Início (Painel)</p><p className="font-bold">{Number(trip.kmInitial) || 0}</p></div>
-                              <div><p className="text-[9px] opacity-40 uppercase">Fim (Painel)</p><p className="font-bold">{Number(trip.kmFinal) || '--'}</p></div>
+                              <div><p className="text-[9px] opacity-40 uppercase">Início (Painel)</p><p className="font-bold">{kmInitial}</p></div>
+                              <div><p className="text-[9px] opacity-40 uppercase">Fim (Painel)</p><p className="font-bold">{kmFinal || '--'}</p></div>
                           </div>
                         </div>
 

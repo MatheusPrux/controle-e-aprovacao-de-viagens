@@ -48,12 +48,30 @@ const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTri
 
   const isIntermediate = (status: TripStatus) => ['Em Andamento', 'Na Fábrica', 'Em Trânsito'].includes(status);
 
-  const formatDate = (dateStr: string) => {
+  // Formatação de data visual (DD/MM/YYYY)
+  const formatDateDisplay = (dateStr: string | undefined) => {
     if (!dateStr) return '--/--/----';
-    const parts = dateStr.split('-');
-    if (parts.length < 3) return dateStr;
-    const [year, month, day] = parts;
-    return `${day}/${month}/${year}`;
+    const dateOnly = dateStr.split('T')[0];
+    const parts = dateOnly.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day}/${month}/${year}`;
+    }
+    return dateOnly;
+  };
+
+  // Formatação de hora visual (HH:mm)
+  const formatTimeDisplay = (timeVal: string | undefined) => {
+    if (!timeVal) return '--:--';
+    const val = String(timeVal);
+    if (val.includes('T')) {
+      const timePart = val.split('T')[1];
+      return timePart.substring(0, 5);
+    }
+    if (/^\d{2}:\d{2}/.test(val)) {
+      return val.substring(0, 5);
+    }
+    return val;
   };
 
   return (
@@ -82,7 +100,7 @@ const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTri
           </div>
         ) : (
           safeTrips.map((trip) => {
-            const kmCount = Number(trip.kmFinal || 0) - Number(trip.kmInitial || 0);
+            const kmCount = (Number(trip.kmFinal) || 0) - (Number(trip.kmInitial) || 0);
             return (
               <div key={trip.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-300">
                 <div className="p-6">
@@ -95,7 +113,7 @@ const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTri
                       <span className="bg-gray-900 text-white px-4 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase">{trip.vehiclePlate}</span>
                     </div>
                     <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-lg">
-                      {formatDate(trip.startDate)}
+                      {formatDateDisplay(trip.startDate)}
                     </span>
                   </div>
 
@@ -105,7 +123,7 @@ const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTri
                         <div className="mt-1 w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-lg shadow-indigo-200 ring-4 ring-indigo-50"></div>
                         <div>
                           <div className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] mb-1">Ponto de Partida</div>
-                          <div className="font-black text-gray-800 text-base">{trip.origin || 'N/A'} <span className="text-indigo-500 text-xs ml-2">({trip.startTime || '--:--'})</span></div>
+                          <div className="font-black text-gray-800 text-base">{trip.origin || 'N/A'} <span className="text-indigo-500 text-xs ml-2">({formatTimeDisplay(trip.startTime)})</span></div>
                         </div>
                       </div>
                       {trip.destination && (
@@ -113,7 +131,7 @@ const DashboardDriver: React.FC<DashboardDriverProps> = ({ user, trips, onAddTri
                           <div className="mt-1 w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-200 ring-4 ring-emerald-50"></div>
                           <div>
                             <div className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] mb-1">Destino Final</div>
-                            <div className="font-black text-gray-800 text-base">{trip.destination} <span className="text-emerald-500 text-xs ml-2">({trip.endTime || '--:--'})</span></div>
+                            <div className="font-black text-gray-800 text-base">{trip.destination} <span className="text-emerald-500 text-xs ml-2">({formatTimeDisplay(trip.endTime)})</span></div>
                           </div>
                         </div>
                       )}

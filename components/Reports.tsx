@@ -10,22 +10,42 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
   const [selectedGallery, setSelectedGallery] = useState<Trip | null>(null);
 
+  // Formatação visual de datas
+  const formatDateDisplay = (dateStr: string | undefined) => {
+    if (!dateStr) return '--/--/----';
+    const dateOnly = String(dateStr).split('T')[0];
+    const parts = dateOnly.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day}/${month}/${year}`;
+    }
+    return dateOnly;
+  };
+
+  // Formatação visual de horas
+  const formatTimeDisplay = (timeVal: string | undefined) => {
+    if (!timeVal) return '--:--';
+    const val = String(timeVal);
+    if (val.includes('T')) {
+      const timePart = val.split('T')[1];
+      return timePart.substring(0, 5);
+    }
+    if (/^\d{2}:\d{2}/.test(val)) {
+      return val.substring(0, 5);
+    }
+    return val;
+  };
+
   const approvedTrips = useMemo(() => {
-    let filtered = trips.filter(t => t.status === 'Aprovado');
-    // Fix: use startDate instead of date for filtering
+    let filtered = trips.filter(t => t && t.status === 'Aprovado');
     if (dateFilter.start) filtered = filtered.filter(t => t.startDate >= dateFilter.start);
     if (dateFilter.end) filtered = filtered.filter(t => t.startDate <= dateFilter.end);
-    // Fix: use startDate instead of date for sorting
     return filtered.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   }, [trips, dateFilter]);
 
-  const totalKm = useMemo(() => approvedTrips.reduce((acc, t) => acc + ((t.kmFinal || 0) - t.kmInitial), 0), [approvedTrips]);
-
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
-  };
+  const totalKm = useMemo(() => 
+    approvedTrips.reduce((acc, t) => acc + ((Number(t.kmFinal) || 0) - (Number(t.kmInitial) || 0)), 0), 
+  [approvedTrips]);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -48,17 +68,17 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                  {[
-                   {img: selectedGallery.photoInitial, label: '1. Partida', sub: selectedGallery.origin, time: selectedGallery.startTime, icon: 'fa-play', color: 'indigo'},
-                   {img: selectedGallery.factoryArrivalPhoto, label: '2. Chegada Fáb.', sub: selectedGallery.factoryName, time: selectedGallery.factoryArrivalTime, icon: 'fa-industry', color: 'amber'},
-                   {img: null, label: '3. Saída Fáb.', sub: selectedGallery.factoryName, time: selectedGallery.factoryDepartureTime, icon: 'fa-clock', color: 'orange', noPhoto: true},
-                   {img: selectedGallery.photoFinal, label: '4. Destino Final', sub: selectedGallery.destination, time: selectedGallery.endTime, icon: 'fa-flag-checkered', color: 'emerald'},
+                   {img: selectedGallery.photoInitial, label: '1. Partida', sub: selectedGallery.origin, time: formatTimeDisplay(selectedGallery.startTime), icon: 'fa-play', color: 'indigo'},
+                   {img: selectedGallery.factoryArrivalPhoto, label: '2. Chegada Fáb.', sub: selectedGallery.factoryName, time: formatTimeDisplay(selectedGallery.factoryArrivalTime), icon: 'fa-industry', color: 'amber'},
+                   {img: null, label: '3. Saída Fáb.', sub: selectedGallery.factoryName, time: formatTimeDisplay(selectedGallery.factoryDepartureTime), icon: 'fa-clock', color: 'orange', noPhoto: true},
+                   {img: selectedGallery.photoFinal, label: '4. Destino Final', sub: selectedGallery.destination, time: formatTimeDisplay(selectedGallery.endTime), icon: 'fa-flag-checkered', color: 'emerald'},
                  ].map((ev, idx) => (
                    <div key={idx} className="group flex flex-col items-center">
                       <div className={`w-full aspect-square relative overflow-hidden rounded-[2.5rem] bg-gray-50 border-4 border-transparent hover:border-${ev.color}-400 transition-all duration-500 shadow-xl shadow-gray-200/50 flex flex-col items-center justify-center`}>
                          {ev.noPhoto ? (
                            <div className="flex flex-col items-center justify-center text-orange-400">
                              <i className={`fas ${ev.icon} text-6xl mb-4 opacity-40`}></i>
-                             <span className="text-[12px] font-black tracking-widest uppercase">Somente Horário</span>
+                             <span className="text-[12px] font-black tracking-widest uppercase text-center">Somente Horário</span>
                            </div>
                          ) : ev.img ? (
                            <img src={ev.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s]" alt={ev.label} />
@@ -75,7 +95,7 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
                          <h4 className="text-sm font-black text-gray-900 uppercase truncate leading-tight mb-3">{ev.sub || '---'}</h4>
                          <div className="inline-flex items-center bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100 shadow-inner">
                             <i className={`fas fa-clock text-[11px] text-${ev.color}-300 mr-2`}></i>
-                            <span className="text-sm font-black text-gray-800 font-mono tracking-tighter">{ev.time || '--:--'}</span>
+                            <span className="text-sm font-black text-gray-800 font-mono tracking-tighter">{ev.time}</span>
                          </div>
                       </div>
                    </div>
@@ -89,7 +109,7 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
                     </div>
                     <div>
                        <span className="text-[10px] font-black uppercase opacity-40 block tracking-widest mb-1">Cálculo de Auditoria</span>
-                       <span className="text-3xl font-black tracking-tighter">Distância: {(selectedGallery.kmFinal || 0) - selectedGallery.kmInitial} KM</span>
+                       <span className="text-3xl font-black tracking-tighter">Distância: {(Number(selectedGallery.kmFinal) || 0) - (Number(selectedGallery.kmInitial) || 0)} KM</span>
                     </div>
                  </div>
                  <div className="grid grid-cols-2 gap-x-12 gap-y-2 border-l border-white/10 pl-12 text-right">
@@ -151,19 +171,19 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
               {approvedTrips.length === 0 ? (
                 <tr><td colSpan={6} className="px-10 py-24 text-center text-gray-300 italic font-black text-xl uppercase tracking-widest opacity-30">Sem registros para o período</td></tr>
               ) : (
-                approvedTrips.map(trip => (
+                approvedTrips.map(trip => {
+                   const diff = (Number(trip.kmFinal) || 0) - (Number(trip.kmInitial) || 0);
+                   return (
                   <tr key={trip.id} className="hover:bg-indigo-50/20 transition-all group">
                     <td className="px-10 py-6">
-                      {/* Fix: use startDate instead of date */}
-                      <div className="font-black text-gray-950 text-xl tracking-tighter">{formatDate(trip.startDate)}</div>
+                      <div className="font-black text-gray-950 text-xl tracking-tighter">{formatDateDisplay(trip.startDate)}</div>
                       <div className="flex items-center mt-1">
-                         <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{trip.startTime}</span>
+                         <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{formatTimeDisplay(trip.startTime)}</span>
                          <i className="fas fa-arrow-right mx-2 text-[8px] text-gray-200"></i>
-                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{trip.endTime || 'Em Curso'}</span>
+                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">{formatTimeDisplay(trip.endTime)}</span>
                       </div>
-                      {/* Fix: use startDate instead of date */}
                       {trip.endDate && trip.endDate !== trip.startDate && (
-                        <div className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-2">FIM: {formatDate(trip.endDate)}</div>
+                        <div className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md inline-block mt-2 uppercase">FIM: {formatDateDisplay(trip.endDate)}</div>
                       )}
                     </td>
                     <td className="px-10 py-6">
@@ -191,17 +211,17 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
                     <td className="px-10 py-6 text-center">
                        <div className="inline-grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] font-black font-mono">
                           <span className="text-right text-gray-300 uppercase tracking-widest">Partida:</span>
-                          <span className="text-left text-indigo-600">{trip.startTime}</span>
+                          <span className="text-left text-indigo-600">{formatTimeDisplay(trip.startTime)}</span>
                           {trip.factoryArrivalTime && (
                             <>
                               <span className="text-right text-gray-300 uppercase tracking-widest">Entrada:</span>
-                              <span className="text-left text-amber-500">{trip.factoryArrivalTime}</span>
+                              <span className="text-left text-amber-500">{formatTimeDisplay(trip.factoryArrivalTime)}</span>
                               <span className="text-right text-gray-300 uppercase tracking-widest">Saída:</span>
-                              <span className="text-left text-orange-600">{trip.factoryDepartureTime}</span>
+                              <span className="text-left text-orange-600">{formatTimeDisplay(trip.factoryDepartureTime)}</span>
                             </>
                           )}
                           <span className="text-right text-gray-300 uppercase tracking-widest">Chegada:</span>
-                          <span className="text-left text-emerald-600">{trip.endTime}</span>
+                          <span className="text-left text-emerald-600">{formatTimeDisplay(trip.endTime)}</span>
                        </div>
                     </td>
                     <td className="px-10 py-6 text-center">
@@ -214,11 +234,11 @@ const Reports: React.FC<ReportsProps> = ({ trips }) => {
                     </td>
                     <td className="px-10 py-6 text-center">
                       <div className="bg-gray-50 text-gray-950 font-black px-6 py-3 rounded-2xl border border-gray-100 text-sm shadow-inner group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-500 transition-all duration-300 tracking-tight">
-                        {(trip.kmFinal || 0) - trip.kmInitial} KM
+                        {isNaN(diff) ? 0 : diff} KM
                       </div>
                     </td>
                   </tr>
-                ))
+                )})
               )}
             </tbody>
           </table>
