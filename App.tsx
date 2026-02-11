@@ -1,132 +1,140 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, AuthState, Trip, Notification } from './types';
+import { User, AuthState, Trip, TripStatus, UserRole } from './types';
 import Login from './components/Login';
 import DashboardDriver from './components/DashboardDriver';
 import DashboardAdmin from './components/DashboardAdmin';
 import Reports from './components/Reports';
 
-const INITIAL_USERS: User[] = [
-  { id: 'admin', name: 'Administrador Sistema', email: 'admin@empresa.com', role: 'admin', password: 'admin' },
-  { id: 'motorista1', name: 'Matheus Prux', email: 'matheus@empresa.com', role: 'driver', password: '123' },
-];
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwgH9mmNbSqnPgS6nevovoN6z-ZeVkiqGFaxsuntd-lgKTEIOfLQRXI0QblMYgKX6I-lw/exec';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'dashboard' | 'reports'>('dashboard');
-  
-  const [users, setUsers] = useState<User[]>(() => {
-    try {
-      const saved = localStorage.getItem('trip_users');
-      return saved ? JSON.parse(saved) : INITIAL_USERS;
-    } catch (e) {
-      return INITIAL_USERS;
-    }
-  });
-
+  const [view, setView] = useState<'dashboard' | 'reports' | 'users'>('dashboard');
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loadingTrips, setLoadingTrips] = useState(false);
   const [auth, setAuth] = useState<AuthState>(() => {
+    const saved = localStorage.getItem('trip_auth_session');
     try {
-      const saved = localStorage.getItem('trip_auth');
       return saved ? JSON.parse(saved) : { user: null, isAuthenticated: false };
-    } catch (e) {
+    } catch {
       return { user: null, isAuthenticated: false };
     }
   });
 
-  const [trips, setTrips] = useState<Trip[]>(() => {
-    try {
-      const saved = localStorage.getItem('trip_data');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      fetchTrips();
     }
-  });
-
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  }, [auth.isAuthenticated]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('trip_auth', JSON.stringify(auth));
-    } catch (e) {
-      console.warn("Falha ao salvar autenticação localmente.");
-    }
+    localStorage.setItem('trip_auth_session', JSON.stringify(auth));
   }, [auth]);
 
-  useEffect(() => {
+  const fetchTrips = async () => {
+    setLoadingTrips(true);
     try {
-      localStorage.setItem('trip_data', JSON.stringify(trips));
-    } catch (e) {
-      console.error("Limite de armazenamento excedido (fotos muito pesadas).");
-      // Mesmo com erro no storage, o estado 'trips' continua vivo na memória do app
+      const response = await fetch(`${WEB_APP_URL}?action=getTrips&t=${Date.now()}`, {
+        method: 'GET',
+        redirect: 'follow',
+      });
+      const result = await response.json();
+      if (result.success) {
+        setTrips(Array.isArray(result.trips) ? result.trips : []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar viagens:", error);
+    } finally {
+      setLoadingTrips(false);
     }
-  }, [trips]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('trip_users', JSON.stringify(users));
-    } catch (e) {
-      console.warn("Falha ao salvar usuários localmente.");
-    }
-  }, [users]);
-
-  const sendMockEmail = (to: string, subject: string, message: string) => {
-    const newNotif: Notification = {
-      id: Math.random().toString(36).substring(2, 9),
-      to,
-      subject,
-      message,
-      timestamp: new Date().toISOString()
-    };
-    setNotifications(prev => [newNotif, ...prev]);
   };
 
-  const handleLogin = (user: User) => {
-    setAuth({ user, isAuthenticated: true });
+  const handleLogin = async (idFromLogin: string, passwordFromLogin: string) => {
+    try {
+      const params = new URLSearchParams({
+        action: 'login',
+        id: idFromLogin,
+        password: passwordFromLogin
+      });
+
+      const response = await fetch(`${WEB_APP_URL}?${params.toString()}`, {
+        method: 'GET',
+        redirect: 'follow'
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.user) {
+        // Garantindo que o role venha corretamente da API
+        setAuth({ 
+          user: result.user, 
+          isAuthenticated: true 
+        });
+      } else {
+        alert(result.message || "Credenciais inválidas.");
+      }
+    } catch (error) {
+      console.error("Erro na autenticação:", error);
+      alert("Falha ao conectar com o servidor.");
+    }
   };
 
-  const handleRegister = (newUser: User) => {
-    setUsers(prev => {
-      const updated = [...prev, newUser];
-      return updated;
-    });
+  const syncTripWithSheets = async (trip: Trip) => {
+    try {
+      await fetch(WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'saveTrip',
+          trip: trip
+        })
+      });
+    } catch (error) {
+      console.error("Erro na sincronização:", error);
+    }
   };
 
   const handleLogout = () => {
     setAuth({ user: null, isAuthenticated: false });
+    setTrips([]);
+    localStorage.removeItem('trip_auth_session');
     setView('dashboard');
   };
 
   const addTrip = (trip: Trip) => {
     setTrips(prev => [trip, ...prev]);
+    syncTripWithSheets(trip);
   };
 
   const updateExistingTrip = (updatedTrip: Trip) => {
     setTrips(prev => prev.map(t => t.id === updatedTrip.id ? updatedTrip : t));
-    
-    if (updatedTrip.status === 'Pendente') {
-      const admins = users.filter(u => u.role === 'admin');
-      admins.forEach(admin => {
-        sendMockEmail(admin.email, 'Viagem Finalizada para Aprovação', `O motorista ${updatedTrip.driverName} finalizou a viagem de ${updatedTrip.origin} para ${updatedTrip.destination} e aguarda sua aprovação.`);
-      });
-    }
+    syncTripWithSheets(updatedTrip);
   };
 
-  const updateTripStatus = (tripId: string, status: 'Aprovado' | 'Rejeitado', comment: string) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === tripId) {
-        const updatedTrip = { ...t, status, adminComment: comment } as Trip;
-        const driver = users.find(u => u.id === t.driverId);
-        if (driver) {
-          sendMockEmail(driver.email, `Viagem ${status}`, `Sua solicitação de ${t.origin} para ${t.destination} foi ${status.toLowerCase()}.`);
+  const updateTripStatus = (tripId: string, status: TripStatus, comment: string, extras?: { dtNumber?: string, tripValue?: number }) => {
+    setTrips(prev => {
+      return prev.map(t => {
+        if (t.id === tripId) {
+          const updated = { 
+            ...t, 
+            status, 
+            adminComment: comment,
+            ...(extras || {})
+          };
+          syncTripWithSheets(updated);
+          return updated;
         }
-        return updatedTrip;
-      }
-      return t;
-    }));
+        return t;
+      });
+    });
   };
 
   if (!auth.isAuthenticated || !auth.user) {
-    return <Login onLogin={handleLogin} onRegister={handleRegister} existingUsers={users} />;
+    return <Login onLogin={(u) => handleLogin(u.id, u.password || '')} existingUsers={[]} isRemote={true} />;
   }
+
+  const isStaff = auth.user.role === 'super_admin' || auth.user.role === 'manager';
 
   return (
     <div className="min-h-screen bg-gray-200 pb-10">
@@ -135,45 +143,75 @@ const App: React.FC = () => {
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('dashboard')}>
               <i className="fas fa-car-side text-2xl"></i>
-              <h1 className="text-xl font-bold tracking-tight">VIAGENS</h1>
+              <h1 className="text-xl font-bold tracking-tight text-white uppercase">SISTEMA</h1>
             </div>
-            {auth.user.role === 'admin' && (
-              <div className="flex space-x-4 ml-4">
-                <button onClick={() => setView('dashboard')} className={`text-sm font-medium px-3 py-1 rounded-lg ${view === 'dashboard' ? 'bg-indigo-700' : 'hover:bg-indigo-500'}`}>Gestão</button>
-                <button onClick={() => setView('reports')} className={`text-sm font-medium px-3 py-1 rounded-lg ${view === 'reports' ? 'bg-indigo-700' : 'hover:bg-indigo-500'}`}>Relatórios</button>
+            {isStaff && (
+              <div className="flex space-x-2 ml-4">
+                <button 
+                  onClick={() => setView('dashboard')} 
+                  className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${view === 'dashboard' ? 'bg-white text-indigo-600 shadow-md' : 'text-indigo-100 hover:bg-indigo-500'}`}
+                >
+                  Gestão
+                </button>
+                <button 
+                  onClick={() => setView('reports')} 
+                  className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${view === 'reports' ? 'bg-white text-indigo-600 shadow-md' : 'text-indigo-100 hover:bg-indigo-500'}`}
+                >
+                  Relatórios
+                </button>
+                {auth.user.role === 'super_admin' && (
+                  <button 
+                    onClick={() => setView('users')} 
+                    className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${view === 'users' ? 'bg-white text-indigo-600 shadow-md' : 'text-indigo-100 hover:bg-indigo-500'}`}
+                  >
+                    Usuários
+                  </button>
+                )}
               </div>
             )}
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium">{auth.user.name}</p>
-              <p className="text-xs text-indigo-100 opacity-80 uppercase">{auth.user.role === 'admin' ? 'Administrador' : 'Motorista'}</p>
+              <p className="text-sm font-bold leading-none">{auth.user.name}</p>
+              <p className="text-[10px] text-indigo-200 uppercase tracking-widest mt-1 font-black">
+                {auth.user.role === 'super_admin' ? 'Super Admin' : auth.user.role === 'manager' ? 'Manager' : 'Motorista'}
+              </p>
             </div>
-            <button onClick={handleLogout} className="bg-indigo-700 hover:bg-indigo-800 p-2 rounded-full w-10 h-10 flex items-center justify-center transition-colors">
-              <i className="fas fa-sign-out-alt"></i>
+            <button onClick={handleLogout} className="bg-indigo-700 hover:bg-red-500 w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-lg">
+              <i className="fas fa-power-off"></i>
             </button>
           </div>
         </div>
       </nav>
 
-      {notifications.length > 0 && (
-        <div className="fixed bottom-4 right-4 z-[100] w-80 space-y-2">
-          {notifications.slice(0, 1).map(n => (
-            <div key={n.id} className="bg-white border-l-4 border-indigo-500 p-4 rounded-lg shadow-xl">
-              <h4 className="text-xs font-bold text-indigo-600 uppercase">Aviso do Sistema</h4>
-              <p className="text-xs text-gray-800 font-semibold mt-1">{n.subject}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <main className="max-w-4xl mx-auto p-4 md:p-6">
-        {view === 'reports' && auth.user.role === 'admin' ? (
+      <main className="max-w-6xl mx-auto p-4 md:p-6">
+        {loadingTrips && trips.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-32 text-indigo-600">
+            <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+            <p className="font-black uppercase tracking-[0.2em] text-[10px] mt-6 opacity-60">Sincronizando...</p>
+          </div>
+        ) : view === 'users' && auth.user.role === 'super_admin' ? (
+          <div className="bg-white p-12 rounded-[3rem] shadow-xl text-center">
+             <i className="fas fa-users-cog text-5xl text-gray-200 mb-6"></i>
+             <h2 className="text-2xl font-black uppercase mb-2">Gestão de Usuários</h2>
+             <p className="text-gray-400 font-bold mb-8">Disponível em breve para Super Admins</p>
+             <button onClick={() => setView('dashboard')} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest">Voltar</button>
+          </div>
+        ) : view === 'reports' && isStaff ? (
           <Reports trips={trips} />
-        ) : auth.user.role === 'admin' ? (
-          <DashboardAdmin trips={trips} onUpdateStatus={updateTripStatus} />
+        ) : isStaff ? (
+          <DashboardAdmin 
+            trips={trips} 
+            userRole={auth.user.role} 
+            onUpdateStatus={updateTripStatus} 
+          />
         ) : (
-          <DashboardDriver user={auth.user} trips={trips.filter(t => t.driverId === auth.user?.id)} onAddTrip={addTrip} onUpdateTrip={updateExistingTrip} />
+          <DashboardDriver 
+            user={auth.user} 
+            trips={trips.filter(t => t && t.driverId === auth.user?.id)} 
+            onAddTrip={addTrip} 
+            onUpdateTrip={updateExistingTrip} 
+          />
         )}
       </main>
     </div>

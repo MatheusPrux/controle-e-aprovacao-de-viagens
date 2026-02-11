@@ -1,5 +1,5 @@
 
-export type UserRole = 'admin' | 'driver';
+export type UserRole = 'super_admin' | 'manager' | 'driver';
 
 export interface User {
   id: string;
@@ -37,6 +37,10 @@ export interface Trip {
   endTime?: string; 
   destination?: string;
   endDate?: string; 
+
+  // Campos de Auditoria (Manager/Admin)
+  dtNumber?: string;
+  tripValue?: number;
 
   status: TripStatus;
   adminComment?: string;

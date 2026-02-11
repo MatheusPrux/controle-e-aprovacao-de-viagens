@@ -216,7 +216,8 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Foto Odômetro Inicial</label>
                 <label className="flex items-center justify-center cursor-pointer bg-white border-2 border-dashed border-indigo-100 rounded-2xl p-6 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group">
-                  <input type="file" accept="image/*" capture="camera" className="hidden" onChange={e => handleFileChange(e, 'photoInitial')} />
+                  {/* Changed capture="camera" to "environment" as per standard specs */}
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFileChange(e, 'photoInitial')} />
                   {formData.photoInitial ? (
                     <div className="flex items-center">
                       <img src={formData.photoInitial} className="h-20 w-20 object-cover rounded-xl shadow-lg mr-4 border-2 border-white" />
@@ -252,7 +253,8 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Evidência de Entrada</label>
                 <label className="flex items-center justify-center cursor-pointer bg-white border-2 border-dashed border-amber-200 rounded-2xl p-8 hover:border-amber-500 hover:bg-amber-50 transition-all group">
-                  <input type="file" accept="image/*" capture="camera" className="hidden" onChange={e => handleFileChange(e, 'factoryArrivalPhoto')} />
+                  {/* Changed capture="camera" to "environment" as per standard specs */}
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFileChange(e, 'factoryArrivalPhoto')} />
                   {formData.factoryArrivalPhoto ? (
                     <div className="flex items-center">
                       <img src={formData.factoryArrivalPhoto} className="h-24 w-24 object-cover rounded-xl shadow-xl mr-5 border-2 border-white" />
@@ -298,7 +300,8 @@ const TripForm: React.FC<TripFormProps> = ({ user, onClose, onSubmit, existingTr
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Foto Odômetro Final</label>
                 <label className="flex items-center justify-center cursor-pointer bg-white border-2 border-dashed border-emerald-200 rounded-2xl p-8 hover:border-emerald-500 hover:bg-emerald-50 transition-all group">
-                  <input type="file" accept="image/*" capture="camera" className="hidden" onChange={e => handleFileChange(e, 'photoFinal')} />
+                  {/* Changed capture="camera" to "environment" as per standard specs */}
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handleFileChange(e, 'photoFinal')} />
                   {formData.photoFinal ? (
                     <div className="flex items-center">
                       <img src={formData.photoFinal} className="h-24 w-24 object-cover rounded-xl shadow-xl mr-5 border-2 border-white" />
