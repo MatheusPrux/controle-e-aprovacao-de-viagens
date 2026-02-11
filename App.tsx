@@ -53,8 +53,8 @@ const App: React.FC = () => {
     try {
       const params = new URLSearchParams({
         action: 'login',
-        id: idFromLogin,
-        password: passwordFromLogin
+        id: String(idFromLogin),
+        password: String(passwordFromLogin)
       });
 
       const response = await fetch(`${WEB_APP_URL}?${params.toString()}`, {
@@ -80,13 +80,24 @@ const App: React.FC = () => {
 
   const syncTripWithSheets = async (trip: Trip) => {
     try {
+      // Garantir que campos numéricos sejam de fato números e datas sejam strings puras
+      const sanitizedTrip = {
+        ...trip,
+        id: String(trip.id),
+        kmInitial: Number(trip.kmInitial) || 0,
+        kmFinal: trip.kmFinal ? Number(trip.kmFinal) : undefined,
+        valor_comissao: trip.valor_comissao ? Number(trip.valor_comissao) : undefined,
+        // Certificar que não há objetos Date, apenas strings ISO ou formatadas
+        createdAt: typeof trip.createdAt === 'string' ? trip.createdAt : new Date().toISOString()
+      };
+
       await fetch(WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'saveTrip',
-          trip: trip
+          trip: sanitizedTrip
         })
       });
     } catch (error) {
@@ -102,13 +113,12 @@ const App: React.FC = () => {
   };
 
   const addTrip = (trip: Trip) => {
-    // Cálculo do ID Sequencial com base na lista atual
     const maxId = trips.reduce((max, t) => {
-      const idNum = parseInt(t.id);
+      const idNum = Number(t.id);
       return !isNaN(idNum) ? Math.max(max, idNum) : max;
     }, 0);
     
-    const tripWithId = { ...trip, id: (maxId + 1).toString() };
+    const tripWithId = { ...trip, id: String(maxId + 1) };
     
     setTrips(prev => [tripWithId, ...prev]);
     syncTripWithSheets(tripWithId);
@@ -126,8 +136,9 @@ const App: React.FC = () => {
           const updated = { 
             ...t, 
             status, 
-            adminComment: comment,
-            ...(extras || {})
+            adminComment: String(comment),
+            numero_dt: extras?.numero_dt ? String(extras.numero_dt) : t.numero_dt,
+            valor_comissao: extras?.valor_comissao !== undefined ? Number(extras.valor_comissao) : t.valor_comissao
           };
           syncTripWithSheets(updated);
           return updated;
@@ -144,13 +155,13 @@ const App: React.FC = () => {
   const isStaff = auth.user.role === 'super_admin' || auth.user.role === 'manager';
 
   return (
-    <div className="min-h-screen bg-gray-200 pb-10">
+    <div className="min-h-screen bg-gray-200 pb-10 font-sans">
       <nav className="bg-indigo-600 text-white p-4 shadow-lg sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setView('dashboard')}>
-              <i className="fas fa-car-side text-2xl"></i>
-              <h1 className="text-xl font-bold tracking-tight text-white uppercase">LOGÍSTICA</h1>
+              <i className="fas fa-truck-fast text-2xl"></i>
+              <h1 className="text-xl font-bold tracking-tight text-white uppercase">SISTEMA LOG</h1>
             </div>
             {isStaff && (
               <div className="flex space-x-2 ml-4">
@@ -166,14 +177,6 @@ const App: React.FC = () => {
                 >
                   Relatórios
                 </button>
-                {auth.user.role === 'super_admin' && (
-                  <button 
-                    onClick={() => setView('users')} 
-                    className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all ${view === 'users' ? 'bg-white text-indigo-600 shadow-md' : 'text-indigo-100 hover:bg-indigo-500'}`}
-                  >
-                    Usuários
-                  </button>
-                )}
               </div>
             )}
           </div>
@@ -196,13 +199,6 @@ const App: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-32 text-indigo-600">
             <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
             <p className="font-black uppercase tracking-[0.2em] text-[10px] mt-6 opacity-60">Sincronizando com a Planilha...</p>
-          </div>
-        ) : view === 'users' && auth.user.role === 'super_admin' ? (
-          <div className="bg-white p-12 rounded-[3rem] shadow-xl text-center">
-             <i className="fas fa-users-cog text-5xl text-gray-200 mb-6"></i>
-             <h2 className="text-2xl font-black uppercase mb-2">Gestão de Usuários</h2>
-             <p className="text-gray-400 font-bold mb-8">Esta funcionalidade está sendo mapeada para a planilha de usuários.</p>
-             <button onClick={() => setView('dashboard')} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black uppercase text-xs tracking-widest">Voltar</button>
           </div>
         ) : view === 'reports' && isStaff ? (
           <Reports trips={trips} />
